@@ -18,9 +18,32 @@ insta-comment-bot/
 ├─ api/webhook.js       ← Vercel endpoint Meta calls (verification + signature check)
 ├─ lib/bot.js           ← the flow: comment → opener → follow check → resource
 ├─ lib/instagram.js     ← Instagram Graph API calls
-├─ config.js            ← ✏️ YOUR keywords, messages and resources
+├─ public/              ← the dashboard (HTML/CSS/JS, no build step)
+├─ api/auth.js, data.js, media.js  ← dashboard API (password-protected)
+├─ lib/store.js         ← Upstash Redis storage (automations, stats, activity)
+├─ config.js            ← fallback rules used until storage is connected
 └─ scripts/test-local.mjs  ← `npm test` simulates the whole flow offline
 ```
+
+---
+
+## Dashboard
+
+Open your Vercel URL (e.g. `https://instadm-psi.vercel.app`) and log in to manage everything without touching code:
+
+- **Reels & posts**: your reels with thumbnails; give any reel its own auto-DM. Reels without one are left alone.
+- **Automations**: per reel or for all posts (with exclusions), keywords or any comment, random public replies, opening DM + button, followers-only gate, and up to 10 resources sent as link buttons or text. Live phone preview while editing.
+- **Activity**: every DM the bot sent, with Instagram's error message if one failed.
+- **Overview / Settings**: totals, setup checklist, pause-all switch.
+
+### Dashboard setup (one time)
+1. **Password**: Vercel → project → Settings → Environment Variables → add `DASHBOARD_PASSWORD` (anything long; the one in your local `.env` works).
+2. **Storage** (free): Vercel → project → **Storage** → **Create Database** → **Upstash (Redis)** → free plan → connect it to this project. Vercel adds `KV_REST_API_URL` / `KV_REST_API_TOKEN` automatically.
+3. **Redeploy** (Deployments → ⋯ → Redeploy).
+
+Until storage is connected, the bot uses the fallback rules in `config.js` and dashboard changes are not saved.
+
+Preview locally with `npm run local` (http://localhost:3000, uses your `.env`, keeps data in memory).
 
 ---
 

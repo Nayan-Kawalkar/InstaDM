@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test": "node scripts/test-local.mjs",
+    "local": "node scripts/dev-server.mjs",
     "dev": "vercel dev"
   }
 }

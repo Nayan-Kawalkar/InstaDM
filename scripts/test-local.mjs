@@ -127,6 +127,78 @@ const { graphBase } = await import("../lib/instagram.js");
 checkQ("IGAA token -> graph.instagram.com", graphBase("IGAAxyz").startsWith("https://graph.instagram.com/"));
 checkQ("EAA token -> graph.facebook.com", graphBase("EAAxyz").startsWith("https://graph.facebook.com/"));
 
+// ---- 9. Dashboard automations: per-reel, all-posts, exclusions ----
+process.env.APP_SECRET = "test-secret";
+const store = await import("../lib/store.js");
+await store.saveAutomations([
+  {
+    id: "reelA", name: "Reel A", scope: "media", mediaIds: ["m10"],
+    trigger: { keywords: ["pdf"] }, opener: { enabled: false }, requireFollow: false,
+    delivery: { message: "Your files", style: "buttons", resources: [
+      { title: "Figma kit", url: "https://a.example/kit" }, { title: "Guide", url: "https://a.example/guide" } ] },
+  },
+  {
+    id: "allPosts", name: "All", scope: "all", excludeMediaIds: ["m12"],
+    trigger: { anyComment: true, keywords: [] }, opener: { enabled: true, text: "Hi {username}", button: "Get it" },
+    requireFollow: false, delivery: { message: "General stuff", resources: [] },
+  },
+]);
+
+reset();
+await comment({ id: "c20", text: "send the PDF pls", from: { id: "7", username: "ann" }, media: { id: "m10" } });
+s = sent();
+const btns = s[0]?.body.message.attachment?.payload.buttons ?? [];
+checkQ("reel-specific: resources sent directly as link buttons", s[0]?.body.recipient.comment_id === "c20" && btns.length === 2 && btns[0].type === "web_url" && btns[0].url === "https://a.example/kit");
+
+reset();
+await comment({ id: "c21", text: "pdf", from: { id: "7", username: "ann" }, media: { id: "m11" } });
+s = sent();
+checkQ("other reel: falls through to all-posts automation (opener)", s[0]?.body.message.attachment?.payload.buttons[0].payload === "GET:allPosts" && s[0].body.message.attachment.payload.text === "Hi ann");
+
+reset();
+await comment({ id: "c22", text: "anything", from: { id: "7" }, media: { id: "m12" } });
+checkQ("excluded reel: nothing sent", sent().length === 0);
+
+reset();
+await comment({ id: "c21", text: "pdf", from: { id: "7", username: "ann" }, media: { id: "m11" } });
+checkQ("duplicate webhook for same comment ignored", sent().length === 0);
+
+reset();
+await tap("7", "GET:allPosts");
+checkQ("tap on all-posts opener delivers message", sent()[0]?.body.message.text === "General stuff");
+
+await store.saveSettings({ paused: true });
+reset();
+await comment({ id: "c23", text: "pdf", from: { id: "7" }, media: { id: "m10" } });
+checkQ("paused: nothing sent", sent().length === 0);
+await store.saveSettings({ paused: false });
+
+const acts = await store.getActivity();
+checkQ("activity log records deliveries", acts.some((a) => a.type === "delivered" && a.automationId === "reelA" && a.ok));
+
+// ---- 10. Dashboard API is password-protected ----
+process.env.DASHBOARD_PASSWORD = "hunter2";
+const auth = await import("../api/auth.js");
+const data = await import("../api/data.js");
+res = await data.GET(new Request("http://x/api/data"));
+checkQ("data API without login -> 401", res.status === 401);
+res = await auth.POST(new Request("http://x/api/auth", { method: "POST", body: JSON.stringify({ password: "nope" }) }));
+checkQ("wrong password -> 401", res.status === 401);
+res = await auth.POST(new Request("http://x/api/auth", { method: "POST", body: JSON.stringify({ password: "hunter2" }) }));
+const cookie = (res.headers.get("set-cookie") ?? "").split(";")[0];
+checkQ("right password -> session cookie", res.status === 200 && cookie.startsWith("instadm_session="));
+const authed = (init = {}) => new Request("http://x/api/data", { ...init, headers: { cookie } });
+res = await data.GET(authed());
+let body = await res.json();
+checkQ("data API with login lists automations", res.status === 200 && body.automations.length === 2);
+res = await data.POST(authed({ method: "POST", body: JSON.stringify({ action: "saveAutomation", automation: { name: "New one", mediaIds: ["m99"], trigger: { keywords: ["Hi"] } } }) }));
+body = await res.json();
+checkQ("saveAutomation creates + normalizes", body.automations.length === 3 && body.automations[2].trigger.keywords[0] === "hi");
+res = await data.POST(authed({ method: "POST", body: JSON.stringify({ action: "deleteAutomation", id: body.automations[2].id }) }));
+checkQ("deleteAutomation removes it", (await res.json()).automations.length === 2);
+res = await data.GET(new Request("http://x/api/data", { headers: { cookie: cookie.replace(/.$/, "0") } }));
+checkQ("tampered cookie -> 401", res.status === 401);
+
 console.log = quiet;
 console.log(failed ? `\n${failed} failed` : "\nAll checks passed");
 process.exit(failed ? 1 : 0);

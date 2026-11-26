@@ -1,5 +1,7 @@
 // ============================================================
-//  EDIT THIS FILE to set up your automations.
+//  FALLBACK RULES. Use the dashboard (your Vercel URL) instead.
+//  These are only used while Upstash Redis storage is NOT connected.
+//  Once storage is connected, the dashboard's automations replace these.
 // ============================================================
 //
 // HOW A RULE WORKS
