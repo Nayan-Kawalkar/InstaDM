@@ -8,7 +8,9 @@ export async function GET(request) {
   const token = url.searchParams.get("hub.verify_token");
   const challenge = url.searchParams.get("hub.challenge");
 
-  if (mode === "subscribe" && token && token === process.env.VERIFY_TOKEN) {
+  const expected = (process.env.VERIFY_TOKEN ?? "").trim();
+  if (!expected) console.error("VERIFY_TOKEN is not set in the environment.");
+  if (mode === "subscribe" && expected && token?.trim() === expected) {
     return new Response(challenge, { status: 200 });
   }
   return new Response("Forbidden", { status: 403 });
