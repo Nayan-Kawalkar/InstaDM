@@ -117,6 +117,12 @@ reset();
 res = await comment({ id: "c5", text: "link", from: { id: "1" } }, "bad-secret");
 checkQ("bad signature -> 401, nothing sent", res.status === 401 && sent().length === 0);
 
+process.env.APP_SECRET = "first-secret, second-secret";
+res = await comment({ id: "c7", text: "nice", from: { id: "1" } }, "second-secret");
+checkQ("comma-separated APP_SECRET: second secret accepted", res.status === 200);
+res = await comment({ id: "c8", text: "nice", from: { id: "1" } }, "third-secret");
+checkQ("comma-separated APP_SECRET: unknown secret rejected", res.status === 401);
+
 console.log = quiet;
 console.log(failed ? `\n${failed} failed` : "\nAll checks passed");
 process.exit(failed ? 1 : 0);

@@ -44,15 +44,20 @@ export async function POST(request) {
   return new Response("EVENT_RECEIVED", { status: 200 });
 }
 
+// APP_SECRET may hold one secret or several separated by commas
+// (e.g. "instagramAppSecret,facebookAppSecret"); a match on any is accepted.
 function isValidSignature(raw, header) {
-  const secret = process.env.APP_SECRET;
-  if (!secret) {
+  const secrets = (process.env.APP_SECRET ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  if (!secrets.length) {
     console.error("APP_SECRET is not set: rejecting webhook POSTs until it is.");
     return false;
   }
   if (!header?.startsWith("sha256=")) return false;
-  const expected = "sha256=" + crypto.createHmac("sha256", secret).update(raw).digest("hex");
   const a = Buffer.from(header);
-  const b = Buffer.from(expected);
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
+  return secrets.some((secret, i) => {
+    const b = Buffer.from("sha256=" + crypto.createHmac("sha256", secret).update(raw).digest("hex"));
+    const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+    if (ok && secrets.length > 1) console.log(`Signature matched APP_SECRET #${i + 1}`);
+    return ok;
+  });
 }

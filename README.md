@@ -41,7 +41,7 @@ Then: Settings → Messages and story replies → Message controls → **Connect
 4. If it says *"Business portfolio selection is mandatory"* → **+ Business portfolio** → create one (free; your name/handle is fine) → confirm the email Meta sends → select it.
 5. Make sure these permissions are added: `instagram_business_basic`, `instagram_business_manage_messages`, `instagram_business_manage_comments`.
 6. **Generate access tokens → Add account** → log in with Instagram and allow everything → **Generate token**. Copy it (`IG_ACCESS_TOKEN`) and the number next to your username (`IG_USER_ID`).
-7. On the same page: **Instagram app secret → Show** (`APP_SECRET`). Use the *Instagram* app secret, not the Facebook one under App settings → Basic.
+7. **App secret** (`APP_SECRET`): look for **Instagram app secret → Show** on the API setup page. If your dashboard has none, use **App settings → Basic → App secret → Show**. Unsure which one signs webhooks? Put both, comma-separated — the bot accepts either.
 
 ## Step 4 — Add environment variables in Vercel
 Vercel → your project → **Settings → Environment Variables** → add:
@@ -49,7 +49,7 @@ Vercel → your project → **Settings → Environment Variables** → add:
 | Name | Value |
 |---|---|
 | `VERIFY_TOKEN` | any random text (one is already generated in your local `.env`) |
-| `APP_SECRET` | from Step 3.7 |
+| `APP_SECRET` | from Step 3.7 — or both secrets comma-separated: `instaSecret,facebookSecret` |
 | `IG_ACCESS_TOKEN` | from Step 3.6 |
 | `IG_USER_ID` | from Step 3.6 |
 
