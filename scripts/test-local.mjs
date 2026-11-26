@@ -123,6 +123,10 @@ checkQ("comma-separated APP_SECRET: second secret accepted", res.status === 200)
 res = await comment({ id: "c8", text: "nice", from: { id: "1" } }, "third-secret");
 checkQ("comma-separated APP_SECRET: unknown secret rejected", res.status === 401);
 
+const { graphBase } = await import("../lib/instagram.js");
+checkQ("IGAA token -> graph.instagram.com", graphBase("IGAAxyz").startsWith("https://graph.instagram.com/"));
+checkQ("EAA token -> graph.facebook.com", graphBase("EAAxyz").startsWith("https://graph.facebook.com/"));
+
 console.log = quiet;
 console.log(failed ? `\n${failed} failed` : "\nAll checks passed");
 process.exit(failed ? 1 : 0);

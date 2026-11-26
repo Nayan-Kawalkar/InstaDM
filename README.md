@@ -95,6 +95,7 @@ Button titles: max 20 characters. Texts: max 640 characters.
 ---
 
 ## Things to know
+- **Two token types work.** `EAA…` tokens (Unified login, what newer dashboards give) are sent to `graph.facebook.com`; `IGAA…` tokens (Instagram login) to `graph.instagram.com`. The bot picks automatically. `IG_USER_ID` must be the long number shown under your username in the token dialog (e.g. `1784…`), not your @handle.
 - **One private-reply DM per comment**, within 7 days (the bot sends it instantly).
 - After the person taps a button or messages you, the bot has 24 hours to message them — that's what the follow prompt / resource use.
 - The follow check uses Instagram's `is_user_follow_business` field. If that check ever errors, `sendResourceIfFollowCheckFails` in `config.js` decides whether to still send the resource (default: yes).
