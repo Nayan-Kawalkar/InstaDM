@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { handleComment, handleMessaging } from "../lib/bot.js";
+import { recordWebhook } from "../lib/store.js";
 
 // ---------- GET: Meta verifies your webhook URL once ----------
 export async function GET(request) {
@@ -22,6 +23,8 @@ export async function POST(request) {
 
   if (!isValidSignature(raw, request.headers.get("x-hub-signature-256"))) {
     console.warn("Invalid or missing signature, ignoring request");
+    // Only count it if it looks like a real Meta delivery (has a signature header)
+    if (request.headers.get("x-hub-signature-256")) await recordWebhook("bad_signature");
     return new Response("Invalid signature", { status: 401 });
   }
 
@@ -33,12 +36,18 @@ export async function POST(request) {
   }
 
   const jobs = [];
+  const kinds = new Set();
   for (const entry of body.entry ?? []) {
     for (const change of entry.changes ?? []) {
+      kinds.add(change.field === "comments" ? "comment" : "other");
       if (change.field === "comments") jobs.push(handleComment(change.value));
     }
-    for (const m of entry.messaging ?? []) jobs.push(handleMessaging(m));
+    for (const m of entry.messaging ?? []) {
+      kinds.add(m.postback ? "postback" : m.message ? "message" : "other");
+      jobs.push(handleMessaging(m));
+    }
   }
+  await Promise.all([...kinds].map(recordWebhook));
   const results = await Promise.allSettled(jobs);
   for (const r of results) if (r.status === "rejected") console.error("Handler error:", r.reason);
 
